@@ -1,0 +1,70 @@
+name: Firebase App Distribution
+
+on:
+  push:
+    branches:
+      - develop
+      - feature/firebase-app-distribution
+  workflow_dispatch:
+
+jobs:
+  distribute-beta:
+    name: Build and distribute beta APK
+    runs-on: ubuntu-latest
+
+    env:
+      VERSION_CODE: ${{ github.run_number }}
+      VERSION_NAME: 0.1.0-beta.${{ github.run_number }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Create local.properties
+        run: |
+          echo "BASE_URL=${{ secrets.BASE_URL }}" >> local.properties
+          echo "TELEGRAM_BOT_LINK=https://t.me/ysukampusbot" >> local.properties
+
+      - name: Decode beta keystore
+        run: |
+          echo "${{ secrets.BETA_KEYSTORE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/ysukampus-beta.jks"
+
+      - name: Create Firebase service account file
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/firebase-service-account.json"
+
+      - name: Build and upload beta APK to Firebase
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+          BETA_KEYSTORE_FILE: ${{ runner.temp }}/ysukampus-beta.jks
+          BETA_KEYSTORE_PASSWORD: ${{ secrets.BETA_KEYSTORE_PASSWORD }}
+          BETA_KEY_ALIAS: ${{ secrets.BETA_KEY_ALIAS }}
+          BETA_KEY_PASSWORD: ${{ secrets.BETA_KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleStagingBetaRelease appDistributionUploadStagingBetaRelease --stacktrace
+
+      # mapping.txt нужен, чтобы читать стектрейсы крашей от тестеров: после R8
+      # классы называются a.b.c. Файл валиден только для этой конкретной сборки,
+      # поэтому имя артефакта привязано к номеру запуска.
+      - name: Upload R8 mapping
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mapping-${{ github.run_number }}
+          path: |
+            app/build/outputs/mapping/stagingBetaRelease/mapping.txt
+            app/build/outputs/mapping/stagingBetaRelease/seeds.txt
+            app/build/outputs/mapping/stagingBetaRelease/usage.txt
+          retention-days: 90
+          if-no-files-found: warn

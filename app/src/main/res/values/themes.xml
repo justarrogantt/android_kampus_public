@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+        Оболочка нарисована фиксированными светлыми токенами (KampusColors/HomeColors),
+        поэтому системная принудительная тёмная тема (в MIUI — «тёмный режим для всех
+        приложений») инвертирует текст и делает его нечитаемым поверх светлого фона.
+        Тёмной версии дизайна нет — отключаем force dark целиком.
+    -->
+    <style name="Theme.Ysukampus" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
+    </style>
+</resources>
