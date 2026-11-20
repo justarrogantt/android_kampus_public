@@ -1,0 +1,64 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #476180
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor #F5F8FC
+skinparam packageBorderColor #A8BACF
+skinparam componentStyle rectangle
+skinparam componentBackgroundColor #EDF4FC
+skinparam componentBorderColor #6D88A6
+skinparam rectangleBackgroundColor #EDF4FC
+skinparam rectangleBorderColor #6D88A6
+skinparam classBackgroundColor #EDF4FC
+skinparam classBorderColor #6D88A6
+skinparam participantBackgroundColor #EDF4FC
+skinparam participantBorderColor #6D88A6
+skinparam sequenceLifeLineBorderColor #A8BACF
+skinparam stateBackgroundColor #EDF4FC
+skinparam stateBorderColor #6D88A6
+skinparam activityBackgroundColor #EDF4FC
+skinparam activityBorderColor #6D88A6
+skinparam noteBackgroundColor #FFFAE9
+skinparam noteBorderColor #BB9A65
+title Варианты сборки и Crashlytics
+
+top to bottom direction
+package "Gradle · :app" {
+  rectangle "environment · dev\nВход через auth/dev/login" as Dev
+  rectangle "environment · staging\nВход через Telegram" as Staging
+  rectangle "Каждый flavor × каждый тип сборки" as Matrix #FFFFFF
+  rectangle "debug\nЛоги HTTP и выбор сервера\nПодпись debug" as Debug
+  rectangle "release\nR8 · релизная подпись не задана" as Release
+  rectangle "beta\nЛокальная · .beta · самообновление\nБета-ключ или debug-подпись" as Beta
+  rectangle "betaRelease\nРаздача · .beta · R8 · самообновление\nБета-ключ · выгрузка mapping.txt" as BetaRel
+}
+component "crashOff\nЗаглушка CrashReporting" as NoCrash
+component "crashOn\nРабочий CrashReporting" as Crash
+cloud "Firebase Crashlytics" as Firebase
+Dev --> Matrix
+Staging --> Matrix
+Matrix --> Debug
+Matrix --> Release
+Matrix --> Beta
+Matrix --> BetaRel
+Debug --> NoCrash
+Release --> NoCrash
+Beta --> Crash
+BetaRel --> Crash
+Crash --> Firebase : отчёты о падениях
+note right of Crash
+  Firebase инициализируется через ContentProvider.
+  Тестовое падение можно вызвать из профиля.
+  Отчёт о тестовом падении отправляется
+  при следующем запуске.
+end note
+note bottom of Beta
+  beta и betaRelease получают разрешение
+  REQUEST_INSTALL_PACKAGES и закрытый
+  BetaInstallResultReceiver из бета-манифеста.
+end note
+@enduml

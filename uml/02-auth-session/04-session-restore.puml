@@ -1,0 +1,54 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #476180
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor #F5F8FC
+skinparam packageBorderColor #A8BACF
+skinparam componentStyle rectangle
+skinparam componentBackgroundColor #EDF4FC
+skinparam componentBorderColor #6D88A6
+skinparam rectangleBackgroundColor #EDF4FC
+skinparam rectangleBorderColor #6D88A6
+skinparam classBackgroundColor #EDF4FC
+skinparam classBorderColor #6D88A6
+skinparam participantBackgroundColor #EDF4FC
+skinparam participantBorderColor #6D88A6
+skinparam sequenceLifeLineBorderColor #A8BACF
+skinparam stateBackgroundColor #EDF4FC
+skinparam stateBorderColor #6D88A6
+skinparam activityBackgroundColor #EDF4FC
+skinparam activityBorderColor #6D88A6
+skinparam noteBackgroundColor #FFFAE9
+skinparam noteBorderColor #BB9A65
+title Восстановление и завершение сессии
+
+start
+:SessionManager.restoreSession();
+:Установить AuthState.Checking;
+:Прочитать access и refresh из TokenStorage;
+if (Оба токена есть?) then (да)
+  if (Access истёк и refresh доступен в конфигурации?) then (да)
+    :Вызвать общий TokenRefresher;
+    if (Результат SessionExpired?) then (да)
+      :Установить NotAuthorized;
+      stop
+    else (Success или Unavailable)
+    endif
+  else (нет)
+  endif
+  :Установить Authorized;
+else (нет)
+  :Установить NotAuthorized;
+endif
+stop
+floating note left
+  При явном выходе или отзыве сессии
+  onNotAuthorized() удаляет токены,
+  запускает очистку Room через callback
+  и публикует NotAuthorized.
+end note
+@enduml

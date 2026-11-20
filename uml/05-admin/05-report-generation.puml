@@ -1,0 +1,66 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 14
+skinparam defaultFontColor #16263C
+skinparam titleFontColor #16263C
+skinparam titleFontSize 19
+skinparam ArrowColor #526C8B
+skinparam ComponentBackgroundColor #EDF4FC
+skinparam ComponentBorderColor #526C8B
+skinparam ClassBackgroundColor #EDF4FC
+skinparam ClassBorderColor #526C8B
+skinparam ParticipantBackgroundColor #EDF4FC
+skinparam ParticipantBorderColor #526C8B
+skinparam LifeLineBorderColor #A0B2C7
+skinparam ActivityBackgroundColor #EDF4FC
+skinparam ActivityBorderColor #526C8B
+skinparam ActivityDiamondBackgroundColor #F3F7FC
+skinparam ActivityDiamondBorderColor #526C8B
+skinparam NoteBackgroundColor #F3F7FC
+skinparam NoteBorderColor #A0B2C7
+
+title Статистика и генерация дневного отчёта
+
+hide footbox
+participant StatsTabContent as UI
+participant AdminViewModel as VM
+participant "RemoteAdminRepository\nи AdminApi" as HTTP
+note over VM,HTTP
+  Общий путь admin/reports/daily
+  Доступ к разделу: view-daily-report
+end note
+
+UI -> VM : Статистика
+VM -> HTTP : GET списка и GET /today
+HTTP --> VM : Сохранённые отчёты и метрики за сегодня
+VM --> UI : Виды «Сегодня» и «Отчёты»
+opt Пользователь открыл детализацию или график
+  VM -> HTTP : GET /{date} или GET /series
+  HTTP --> VM : Метрики дня или ряд выбранной метрики
+  VM --> UI : ReportDetailsDialog или график
+end
+
+opt Есть право generate-daily-report
+  UI -> VM : Сгенерировать отчёт за дату
+  VM -> HTTP : POST /generate (date, force=false)
+  alt Дата уже рассчитана · HTTP 409
+    HTTP --> VM : Exists
+    VM --> UI : Предложить пересборку
+    UI -> VM : Подтвердить пересборку
+    VM -> HTTP : POST /generate (date, force=true)
+    HTTP --> VM : Задача поставлена в очередь
+  else Отчёт поставлен в очередь
+    HTTP --> VM : Queued
+  end
+  VM -> HTTP : Обновить список отчётов
+  HTTP --> VM : Список с состояниями задач
+end
+
+loop Вкладка открыта и есть Queued или Running
+  VM -> HTTP : GET списка каждые 4 секунды
+  HTTP --> VM : Актуальные состояния
+  VM --> UI : Обновить список и сообщить о Done или Failed
+end
+@enduml

@@ -1,0 +1,59 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #476180
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor #F5F8FC
+skinparam packageBorderColor #A8BACF
+skinparam componentStyle rectangle
+skinparam componentBackgroundColor #EDF4FC
+skinparam componentBorderColor #6D88A6
+skinparam rectangleBackgroundColor #EDF4FC
+skinparam rectangleBorderColor #6D88A6
+skinparam classBackgroundColor #EDF4FC
+skinparam classBorderColor #6D88A6
+skinparam participantBackgroundColor #EDF4FC
+skinparam participantBorderColor #6D88A6
+skinparam sequenceLifeLineBorderColor #A8BACF
+skinparam stateBackgroundColor #EDF4FC
+skinparam stateBorderColor #6D88A6
+skinparam activityBackgroundColor #EDF4FC
+skinparam activityBorderColor #6D88A6
+skinparam noteBackgroundColor #FFFAE9
+skinparam noteBorderColor #BB9A65
+title Запуск приложения и выбор экрана
+
+start
+:Android запускает MainActivity;
+:Загрузить ApiEnvironmentHolder;
+:Установить YsukampusTheme;
+:Открыть RegistrationFlowScreen;
+:Запустить onAppStarted();
+if (Сессия восстановлена?) then (да)
+  :Перейти в AuthorizedMainRoute;
+else (нет)
+  :Начать вход через Telegram или dev;
+  if (Вход завершён?) then (да)
+    :Перейти в AuthorizedMainRoute;
+  else (ожидание / ошибка)
+    :Показать состояние регистрации;
+    stop
+  endif
+endif
+:Подключить ProfileViewModel и BetaUpdateViewModel;
+if (showAdminPanel?) then (да)
+  :AdminPanelScreen в YsuAdminTheme;
+else (нет)
+  :MainScreen;
+endif
+note right
+  Кнопка в профиле открывает админ-панель.
+  Возврат из панели открывает MainScreen.
+  При потере сессии активный
+  авторизованный маршрут закрывается.
+end note
+stop
+@enduml

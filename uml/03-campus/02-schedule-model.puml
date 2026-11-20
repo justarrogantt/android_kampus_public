@@ -1,0 +1,88 @@
+@startuml
+' Исходники: ui/main/schedule/ScheduleModels.kt, data/schedule/ScheduleMappers.kt
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam dpi 120
+skinparam ArrowColor #536D8A
+skinparam titleFontSize 19
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+}
+skinparam class {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  AttributeFontColor #16263C
+}
+skinparam sequence {
+  ParticipantBackgroundColor #EDF4FC
+  ParticipantBorderColor #536D8A
+  LifeLineBorderColor #536D8A
+  GroupBackgroundColor #EDF4FC
+}
+skinparam activity {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  DiamondBackgroundColor #EDF4FC
+  DiamondBorderColor #536D8A
+}
+skinparam note {
+  BackgroundColor #F7F9FC
+  BorderColor #ABBBD0
+  FontColor #16263C
+}
+
+title Расписание · сущности и состав учебного дня
+
+hide circle
+hide empty members
+
+class ScheduleEntity {
+  oid: String
+  name: String
+  type: ScheduleEntityType
+}
+class ScheduleDirectory {
+  groups: List<ScheduleEntity>
+  lecturers: List<ScheduleEntity>
+}
+class ScheduleWeekResult
+class ScheduleDayResult
+class ScheduleDay {
+  date: String
+}
+class ScheduleSlot {
+  number: String
+  startTime: String
+  endTime: String
+}
+class Lesson {
+  discipline: String
+  kind: LessonKind
+  lecturer: String
+  lecturerOid: String?
+  auditorium: String
+}
+class LessonAudience {
+  label: String
+  scope: AudienceScope
+}
+class LessonAudienceMember {
+  label: String
+  name: String
+  oid: String?
+}
+
+ScheduleDirectory --> "0..*" ScheduleEntity : группы и преподаватели
+ScheduleWeekResult --> "1" ScheduleEntity : entity
+ScheduleDayResult --> "1" ScheduleEntity : entity
+ScheduleWeekResult *-- "0..*" ScheduleDay : days
+ScheduleDayResult *-- "1" ScheduleDay : day
+ScheduleDay *-right- "0..*" ScheduleSlot : slots
+ScheduleSlot *-right- "0..*" Lesson : lessons
+Lesson *-- "1" LessonAudience : audience
+LessonAudience *-- "0..*" LessonAudienceMember : members
+@enduml

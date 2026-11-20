@@ -1,0 +1,66 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #476180
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor #F5F8FC
+skinparam packageBorderColor #A8BACF
+skinparam componentStyle rectangle
+skinparam componentBackgroundColor #EDF4FC
+skinparam componentBorderColor #6D88A6
+skinparam rectangleBackgroundColor #EDF4FC
+skinparam rectangleBorderColor #6D88A6
+skinparam classBackgroundColor #EDF4FC
+skinparam classBorderColor #6D88A6
+skinparam participantBackgroundColor #EDF4FC
+skinparam participantBorderColor #6D88A6
+skinparam sequenceLifeLineBorderColor #A8BACF
+skinparam stateBackgroundColor #EDF4FC
+skinparam stateBorderColor #6D88A6
+skinparam activityBackgroundColor #EDF4FC
+skinparam activityBorderColor #6D88A6
+skinparam noteBackgroundColor #FFFAE9
+skinparam noteBorderColor #BB9A65
+title Локальный кэш ответов
+
+hide empty members
+class "Кэши функций" as Features {
+  ScheduleCache
+  ForumCache
+  NotificationCache
+}
+class ResponseCache {
+  read(key, serializer, maxAge)
+  write(key, serializer, value)
+  evictPrefix(prefix)
+  clear()
+}
+interface CachedResponseDao {
+  find(key)
+  put(entity)
+  deleteByPrefix(prefix)
+  deleteOlderThan(cutoff)
+  clear()
+}
+class KampusDatabase
+class CachedResponseEntity {
+  key: String
+  payload: String
+  updatedAt: Long
+}
+class "SessionManagerProvider" as Session
+Features --> ResponseCache
+Session ..> ResponseCache : очищает при завершении сессии
+ResponseCache --> CachedResponseDao
+KampusDatabase --> CachedResponseDao : cachedResponseDao()
+CachedResponseDao ..> CachedResponseEntity
+note right of Features
+  loadCached() в репозиториях:
+  1. Свежая запись, если обновление не принудительное
+  2. Сеть и запись успешного ответа
+  3. Запись любого возраста при ошибке сети
+end note
+@enduml

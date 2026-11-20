@@ -1,0 +1,57 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 14
+skinparam defaultFontColor #16263C
+skinparam titleFontColor #16263C
+skinparam titleFontSize 19
+skinparam ArrowColor #526C8B
+skinparam ComponentBackgroundColor #EDF4FC
+skinparam ComponentBorderColor #526C8B
+skinparam ClassBackgroundColor #EDF4FC
+skinparam ClassBorderColor #526C8B
+skinparam ParticipantBackgroundColor #EDF4FC
+skinparam ParticipantBorderColor #526C8B
+skinparam LifeLineBorderColor #A0B2C7
+skinparam ActivityBackgroundColor #EDF4FC
+skinparam ActivityBorderColor #526C8B
+skinparam ActivityDiamondBackgroundColor #F3F7FC
+skinparam ActivityDiamondBorderColor #526C8B
+skinparam NoteBackgroundColor #F3F7FC
+skinparam NoteBorderColor #A0B2C7
+
+title Живое обновление очереди модерации
+
+hide footbox
+participant "ModerationTabContent\nи AdminPanelContent" as UI
+participant AdminViewModel as VM
+participant RemoteAdminRepository as Repo
+participant ModeratorWebSocketClient as WS
+
+UI -> VM : Выбрана вкладка «Модерация»
+VM -> Repo : startModeratorSocket()
+Repo -> WS : start()
+
+alt moderation_count
+  WS --> Repo : ModerationCount
+  Repo --> VM : Событие
+  VM --> UI : moderationQueueCount → «В очереди: N»
+else new_post или new_comment
+  WS --> Repo : NewPost или NewComment
+  Repo --> VM : Событие
+  VM -> VM : Добавить элемент в буфер
+  VM --> UI : Показать кнопку «↑ Свежие посты»
+  UI -> VM : Нажать «↑ Свежие посты»
+  VM -> Repo : Повторно загрузить списки по HTTP
+  Repo --> VM : Данные или ошибка HTTP
+  VM -> VM : Объединить буфер с новой очередью\nили прежней при ошибке. Очистить буфер.
+  VM --> UI : Обновить очередь и прокрутить вверх
+end
+
+UI -> VM : Переход на другую вкладку
+
+note over VM : Сокет также останавливается в onCleared()
+VM -> Repo : stopModeratorSocket()
+Repo -> WS : stop()
+@enduml

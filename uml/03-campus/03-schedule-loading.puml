@@ -1,0 +1,82 @@
+@startuml
+' Исходники: ui/main/MainScreen.kt, ui/main/schedule/{ScheduleViewModel,ScheduleUiState,ScheduleScreen}.kt, data/schedule/ScheduleRepository.kt
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam dpi 120
+skinparam ArrowColor #536D8A
+skinparam titleFontSize 19
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+}
+skinparam class {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  AttributeFontColor #16263C
+}
+skinparam sequence {
+  ParticipantBackgroundColor #EDF4FC
+  ParticipantBorderColor #536D8A
+  LifeLineBorderColor #536D8A
+  GroupBackgroundColor #EDF4FC
+}
+skinparam activity {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  DiamondBackgroundColor #EDF4FC
+  DiamondBorderColor #536D8A
+}
+skinparam note {
+  BackgroundColor #F7F9FC
+  BorderColor #ABBBD0
+  FontColor #16263C
+}
+
+title Расписание · выбор группы и загрузка вкладки
+
+start
+switch (Событие)
+case (Пикер или карточка)
+  :Выбрать группу или преподавателя.
+  При переходе из карточки пары — подтвердить;
+  :Сменить сущность и сбросить
+  данные всех режимов;
+case (Моё расписание)
+  :Выбрать ownerEntity и сбросить
+  данные всех режимов;
+case (День на главной)
+  :MainScreen передаёт focusDate;
+  :Переключиться на режим «Неделя»;
+case (Вкладка или повтор)
+  :Выбрать активный режим
+  или повторить загрузку принудительно;
+endswitch
+
+if (Данные режима уже в памяти\nи повтор обычный?) then (да)
+  :Отобразить текущие данные;
+else (нет)
+  :Показать дисковую копию, если она есть;
+  :Вызвать ScheduleRepository.getDay / getWeek;
+  note right
+    Параметр group передаётся
+    для чужой группы или преподавателя.
+  end note
+  if (Ответ получен?) then (да)
+    :Обновить активный режим;
+  else (нет)
+    :Сохранить копию на экране.
+    Для пустого экрана — повторы до 30 с,
+    затем состояние ошибки;
+  endif
+endif
+if (Выбран день с главной?) then (да)
+  :Прокрутить «Неделю» к дню,
+  когда он появится в списке;
+endif
+:При прокрутке «Недели» догружать
+до двух дополнительных недель;
+stop
+@enduml

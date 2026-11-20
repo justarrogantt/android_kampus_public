@@ -1,0 +1,52 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #476180
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor #F5F8FC
+skinparam packageBorderColor #A8BACF
+skinparam componentStyle rectangle
+skinparam componentBackgroundColor #EDF4FC
+skinparam componentBorderColor #6D88A6
+skinparam rectangleBackgroundColor #EDF4FC
+skinparam rectangleBorderColor #6D88A6
+skinparam classBackgroundColor #EDF4FC
+skinparam classBorderColor #6D88A6
+skinparam participantBackgroundColor #EDF4FC
+skinparam participantBorderColor #6D88A6
+skinparam sequenceLifeLineBorderColor #A8BACF
+skinparam stateBackgroundColor #EDF4FC
+skinparam stateBorderColor #6D88A6
+skinparam activityBackgroundColor #EDF4FC
+skinparam activityBorderColor #6D88A6
+skinparam noteBackgroundColor #FFFAE9
+skinparam noteBorderColor #BB9A65
+title HTTP-клиенты и заголовки авторизации
+
+top to bottom direction
+component "ApiServiceFactory\nRetrofit + Kotlinx Serialization" as Factory
+component "ApiEnvironmentHolder" as Env
+component "HttpClientProvider\nОбщий пул соединений и потоков" as Pool
+component "PublicService\nКод, dev-вход, статус, бета-сборки" as Public
+component "AuthService\nПодтверждение кода и обновление токенов" as Device
+component "AuthorizedService / AdminApi\nПрикладные и административные запросы" as Private
+component DeviceIdInterceptor as DevId
+component AuthInterceptor as Bearer
+component TokenAuthentificator as Challenge
+component TokenRefresher as Refresh
+Factory --> Public
+Factory --> Device
+Factory --> Private
+Factory ..> Env : базовый URL
+Factory ..> Pool : OkHttpClient.Builder
+Device --> DevId
+Private --> DevId : 1 · X-Device-Id
+Private --> Bearer : 2 · Authorization
+Private --> Challenge : ответ 401
+Bearer ..> Refresh : токен истёк
+Challenge ..> Refresh : токен отвергнут
+Refresh ..> Device : POST auth/refresh
+@enduml

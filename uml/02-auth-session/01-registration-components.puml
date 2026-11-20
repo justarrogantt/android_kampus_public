@@ -1,0 +1,58 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #476180
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor #F5F8FC
+skinparam packageBorderColor #A8BACF
+skinparam componentStyle rectangle
+skinparam componentBackgroundColor #EDF4FC
+skinparam componentBorderColor #6D88A6
+skinparam rectangleBackgroundColor #EDF4FC
+skinparam rectangleBorderColor #6D88A6
+skinparam classBackgroundColor #EDF4FC
+skinparam classBorderColor #6D88A6
+skinparam participantBackgroundColor #EDF4FC
+skinparam participantBorderColor #6D88A6
+skinparam sequenceLifeLineBorderColor #A8BACF
+skinparam stateBackgroundColor #EDF4FC
+skinparam stateBorderColor #6D88A6
+skinparam activityBackgroundColor #EDF4FC
+skinparam activityBorderColor #6D88A6
+skinparam noteBackgroundColor #FFFAE9
+skinparam noteBorderColor #BB9A65
+title Компоненты входа и регистрации
+
+top to bottom direction
+hide empty members
+package "feature.registration" {
+  class "RegistrationFlowScreen" as Screen <<composable>>
+  class "RegistrationViewModel" as VM
+  class "RegistrationViewModelFactory" as Factory
+  interface "RegistrationInteractor" as I
+  class "DefaultRegistrationInteractor" as Interactor
+}
+package "data.auth" {
+  class "AuthRepository" as Auth
+  class "RegistrationRepository" as Reg
+  class "SessionRepository" as SessionRepo
+}
+package "data.session" {
+  class "SessionManager" as Session
+  interface "CurrentUserStore" as User
+}
+Screen --> VM : отображает состояние
+Screen ..> Factory : передаёт в viewModel()
+Factory ..> Interactor : собирает зависимости
+VM --> I
+I <|.. Interactor
+Interactor --> Auth : способ входа
+Interactor --> Reg : статус и подтверждение
+Interactor --> SessionRepo : операции сессий
+Interactor --> Session : состояние авторизации
+Interactor --> User : сохранение пользователя
+Auth --> Reg : код или dev-вход
+@enduml

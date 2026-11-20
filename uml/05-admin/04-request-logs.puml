@@ -1,0 +1,57 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 14
+skinparam defaultFontColor #16263C
+skinparam titleFontColor #16263C
+skinparam titleFontSize 19
+skinparam ArrowColor #526C8B
+skinparam ComponentBackgroundColor #EDF4FC
+skinparam ComponentBorderColor #526C8B
+skinparam ClassBackgroundColor #EDF4FC
+skinparam ClassBorderColor #526C8B
+skinparam ParticipantBackgroundColor #EDF4FC
+skinparam ParticipantBorderColor #526C8B
+skinparam LifeLineBorderColor #A0B2C7
+skinparam ActivityBackgroundColor #EDF4FC
+skinparam ActivityBorderColor #526C8B
+skinparam ActivityDiamondBackgroundColor #F3F7FC
+skinparam ActivityDiamondBorderColor #526C8B
+skinparam NoteBackgroundColor #F3F7FC
+skinparam NoteBorderColor #A0B2C7
+
+title Журнал серверных HTTP-запросов
+
+hide footbox
+participant "LoggingTabContent\nи диалоги" as UI
+participant AdminViewModel as VM
+participant "RemoteAdminRepository\nи AdminApi" as HTTP
+
+UI -> VM : Открыть вкладку, сменить страницу\nили применить фильтр
+note left of VM
+  Новый фильтр или сброс
+  возвращает на страницу 1.
+end note
+VM -> HTTP : POST ref/log/request (страница и фильтр)
+HTTP --> VM : AdminRequestLogsPage
+VM --> UI : Строки, счётчики и пагинация
+
+UI -> VM : Выбрать запись
+VM -> HTTP : GET ref/log/request/{logId}
+HTTP --> VM : AdminRequestLogDetails
+VM --> UI : RequestLogDetailsDialog\n(заголовки, тела запроса и ответа)
+
+opt Пользователь подтвердил удаление
+  UI -> VM : Удалить запись
+  VM -> HTTP : DELETE ref/log/request/{logId}
+  HTTP --> VM : Успех
+  VM -> HTTP : Снова загрузить текущую страницу
+  HTTP --> VM : Обновлённая страница
+  opt Пустая страница с номером больше 1
+    VM -> HTTP : Загрузить предыдущую страницу
+    HTTP --> VM : Предыдущая страница
+  end
+  VM --> UI : Список после удаления
+end
+@enduml

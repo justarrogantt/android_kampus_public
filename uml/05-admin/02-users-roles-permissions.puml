@@ -1,0 +1,75 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 14
+skinparam defaultFontColor #16263C
+skinparam titleFontColor #16263C
+skinparam titleFontSize 19
+skinparam ArrowColor #526C8B
+skinparam ComponentBackgroundColor #EDF4FC
+skinparam ComponentBorderColor #526C8B
+skinparam ClassBackgroundColor #EDF4FC
+skinparam ClassBorderColor #526C8B
+skinparam ParticipantBackgroundColor #EDF4FC
+skinparam ParticipantBorderColor #526C8B
+skinparam LifeLineBorderColor #A0B2C7
+skinparam ActivityBackgroundColor #EDF4FC
+skinparam ActivityBorderColor #526C8B
+skinparam ActivityDiamondBackgroundColor #F3F7FC
+skinparam ActivityDiamondBorderColor #526C8B
+skinparam NoteBackgroundColor #F3F7FC
+skinparam NoteBorderColor #A0B2C7
+
+title Пользователи, роли и права
+
+left to right direction
+hide circle
+hide empty methods
+skinparam classAttributeIconSize 0
+skinparam nodesep 35
+
+class AdminUser {
+  id: Long
+  name: String
+  username: String?
+  roles: List<AdminRole>
+}
+class AdminRole {
+  id: Int
+  name: String
+  slug: String
+  description: String?
+  isDeleted: Boolean
+}
+class AdminPermission {
+  id: Int
+  name: String
+  slug: String
+  description: String?
+  isDeleted: Boolean
+}
+
+AdminUser --> "0..*" AdminRole : роли пользователя
+AdminRole "0..*" -- "0..*" AdminPermission : права запрашиваются по roleId
+
+note bottom of AdminUser
+  «Пользователи»
+  Назначение и снятие роли
+  (мягкое или полное).
+end note
+note bottom of AdminRole
+  «Доступы → Роли»
+  Создание, изменение, восстановление.
+  Мягкое и полное удаление.
+  Первичные права назначаются
+  после получения id новой роли.
+end note
+note bottom of AdminPermission
+  «Доступы → Права»
+  Создание, изменение, восстановление.
+  Мягкое и полное удаление.
+  Настройки роли позволяют
+  назначать и снимать права.
+end note
+@enduml

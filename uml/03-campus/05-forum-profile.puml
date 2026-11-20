@@ -1,0 +1,69 @@
+@startuml
+' Исходники: ui/main/MainScreen.kt, ui/main/profile/activity/, data/forum/{ForumRepository,ForumCache}.kt
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam dpi 120
+skinparam ArrowColor #536D8A
+skinparam titleFontSize 19
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+}
+skinparam class {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  AttributeFontColor #16263C
+}
+skinparam sequence {
+  ParticipantBackgroundColor #EDF4FC
+  ParticipantBorderColor #536D8A
+  LifeLineBorderColor #536D8A
+  GroupBackgroundColor #EDF4FC
+}
+skinparam activity {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  DiamondBackgroundColor #EDF4FC
+  DiamondBorderColor #536D8A
+}
+skinparam note {
+  BackgroundColor #F7F9FC
+  BorderColor #ABBBD0
+  FontColor #16263C
+}
+
+title Профиль форума · своя и чужая активность
+
+component "Профиль · «Открыть»" as own
+component "Карточка поста / комментария\nАватар или имя автора" as author
+component "MyProfileSheet" as sheet
+component "MyProfileViewModel" as vm
+component "ProfileRepository" as userRepo
+component "CurrentUserStore" as userStore
+component "ForumRepository" as forum
+component "ForumCache" as cache
+component "ForumThreadHost" as thread
+
+own --> sheet : свой профиль
+author --> sheet : profileId автора
+sheet --> vm : события вкладок и карточек
+sheet ..> thread : MainScreen открывает пост
+vm --> userStore : profileId текущего пользователя
+vm --> userRepo : запросить profileId,\nесли его нет в кэше
+vm --> forum : шапка, посты, комментарии
+forum --> cache : шапка и первые страницы
+
+note right of vm
+  Для постов и комментариев отдельные курсоры.
+  Своё содержимое можно удалить,
+  на чужое — отправить жалобу.
+end note
+
+note bottom of forum
+  Для своей активности запросы постов и комментариев
+  идут без profile_id, для чужой — с profile_id автора.
+end note
+@enduml

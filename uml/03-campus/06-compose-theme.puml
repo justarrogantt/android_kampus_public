@@ -1,0 +1,66 @@
+@startuml
+' Исходники: MainActivity.kt, feature/registration/ui/RegistrationFlowScreen.kt, ui/main/{MainScreen,MainSheetDefaults,KampusMotion}.kt, ui/theme/{Theme,Type,YsuAdminTokens}.kt
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam dpi 120
+skinparam ArrowColor #536D8A
+skinparam titleFontSize 19
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+}
+skinparam class {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  AttributeFontColor #16263C
+}
+skinparam sequence {
+  ParticipantBackgroundColor #EDF4FC
+  ParticipantBorderColor #536D8A
+  LifeLineBorderColor #536D8A
+  GroupBackgroundColor #EDF4FC
+}
+skinparam activity {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  DiamondBackgroundColor #EDF4FC
+  DiamondBorderColor #536D8A
+}
+skinparam note {
+  BackgroundColor #F7F9FC
+  BorderColor #ABBBD0
+  FontColor #16263C
+}
+
+title Оболочка · вкладки, слои и темы Compose
+
+component "MainActivity" as activity
+component "YsukampusTheme\nСветлая тема Material 3\nKampusColors и Typography" as theme
+component "YsuAdminTheme\nСобственная схема и токены" as adminTheme
+component "AdminPanelScreen" as admin
+component "MainScreen" as shell
+component "HorizontalPager\nГлавная, расписание, форум, профиль" as pager
+component "MainBottomBar" as bottom
+component "ForumThreadHost\nТред поверх вкладок" as thread
+component "KampusMotion\nСпецификации анимаций" as motion
+component "KampusSheet и LocalKampusSheetBlur\nРазмер шторок и состояние размытия" as sheets
+
+activity -down-> theme : оборачивает приложение
+theme -down-> shell : тема оболочки
+theme -right-> adminTheme : вложенная тема\nпри входе в админку
+adminTheme -right-> admin : тема панели
+shell -down-> pager : страницы и жесты
+shell -down-> bottom : выбор вкладки
+shell -down-> thread : отдельный слой
+shell -left-> sheets : общее размытие
+shell ..> motion : смена вкладки
+thread ..> motion : выезд и закрытие
+
+note bottom of pager
+  Пока тред открыт, жест листания выключен,
+  нижняя панель скрыта.
+end note
+@enduml

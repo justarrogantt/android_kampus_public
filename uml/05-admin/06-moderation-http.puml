@@ -1,0 +1,62 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 14
+skinparam defaultFontColor #16263C
+skinparam titleFontColor #16263C
+skinparam titleFontSize 19
+skinparam ArrowColor #526C8B
+skinparam ComponentBackgroundColor #EDF4FC
+skinparam ComponentBorderColor #526C8B
+skinparam ClassBackgroundColor #EDF4FC
+skinparam ClassBorderColor #526C8B
+skinparam ParticipantBackgroundColor #EDF4FC
+skinparam ParticipantBorderColor #526C8B
+skinparam LifeLineBorderColor #A0B2C7
+skinparam ActivityBackgroundColor #EDF4FC
+skinparam ActivityBorderColor #526C8B
+skinparam ActivityDiamondBackgroundColor #F3F7FC
+skinparam ActivityDiamondBorderColor #526C8B
+skinparam NoteBackgroundColor #F3F7FC
+skinparam NoteBorderColor #A0B2C7
+
+title Модерация форума по HTTP
+
+hide footbox
+participant "ModerationTabContent\nи диалоги" as UI
+participant AdminViewModel as VM
+participant "RemoteAdminRepository\nи AdminApi" as HTTP
+
+note right of HTTP
+  Общий путь forum/moderation
+end note
+UI -> VM : Открыть вкладку
+VM -> HTTP : GET /content и /reports
+note right of HTTP
+  При 404 у /content запрашиваются
+  /posts и /comments.
+end note
+opt Разрешён просмотр истории
+  VM -> HTTP : GET /history (per_page=100)
+  HTTP --> VM : События модерации или ошибка
+  note right of VM : Ошибка скрывает подвкладку истории
+end
+VM --> UI : Очередь, репорты, доступная история
+
+alt Скрыть или одобрить
+  UI -> VM : ModerationVerdictClicked
+  VM -> HTTP : PATCH /{posts|comments}/{id}/status\nstatus = hidden или active
+  HTTP --> VM : Статус изменён
+  opt Действие выполнено по жалобе
+    VM -> HTTP : POST /reports/{id}/resolve
+    HTTP --> VM : Жалоба закрыта
+  end
+else Восстановить из истории при наличии права
+  UI -> VM : RestoreModerationContentClicked
+  VM -> HTTP : POST /content/{type}/{id}/restore
+  HTTP --> VM : Контент восстановлен
+end
+VM --> UI : Закрыть диалог после успеха
+VM -> HTTP : Повторная загрузка раздела
+@enduml
