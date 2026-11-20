@@ -1,0 +1,66 @@
+@startuml
+' Исходники: ui/main/home/, data/weather/WeatherRepository.kt, data/auth/AuthorizedService.kt
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam dpi 120
+skinparam ArrowColor #536D8A
+skinparam titleFontSize 19
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+}
+skinparam class {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  AttributeFontColor #16263C
+}
+skinparam sequence {
+  ParticipantBackgroundColor #EDF4FC
+  ParticipantBorderColor #536D8A
+  LifeLineBorderColor #536D8A
+  GroupBackgroundColor #EDF4FC
+}
+skinparam activity {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  DiamondBackgroundColor #EDF4FC
+  DiamondBorderColor #536D8A
+}
+skinparam note {
+  BackgroundColor #F7F9FC
+  BorderColor #ABBBD0
+  FontColor #16263C
+}
+
+title Главная · расписание, погода и форум
+
+component "HomeScreen\nПриветствие, неделя, ближайшая пара, посты" as screen
+component "HomeViewModel" as vm
+component "HomeUiState\nДанные и состояние блоков" as model
+component "CurrentUserStore" as user
+component "ScheduleRepository" as schedule
+component "WeatherRepository" as weather
+component "ForumRepository" as forum
+component "AuthorizedService" as api
+
+screen -down-> vm : события видимости\nи карточек
+vm -left-> model : StateFlow
+vm -right-> user : имя форума
+vm -down-> schedule : текущая неделя
+vm -down-> weather : погода
+vm -down-> forum : два поста и действия
+weather --> api : GET weather
+
+note bottom of model
+  Ближайшая пара зависит от времени.
+  Время обновляется каждые 30 секунд.
+end note
+
+note bottom of api
+  Блоки загружаются независимо.
+  При ошибке погоды остаётся скелетон.
+end note
+@enduml

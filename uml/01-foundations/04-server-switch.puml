@@ -1,0 +1,57 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #476180
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor #F5F8FC
+skinparam packageBorderColor #A8BACF
+skinparam componentStyle rectangle
+skinparam componentBackgroundColor #EDF4FC
+skinparam componentBorderColor #6D88A6
+skinparam rectangleBackgroundColor #EDF4FC
+skinparam rectangleBorderColor #6D88A6
+skinparam classBackgroundColor #EDF4FC
+skinparam classBorderColor #6D88A6
+skinparam participantBackgroundColor #EDF4FC
+skinparam participantBorderColor #6D88A6
+skinparam sequenceLifeLineBorderColor #A8BACF
+skinparam stateBackgroundColor #EDF4FC
+skinparam stateBorderColor #6D88A6
+skinparam activityBackgroundColor #EDF4FC
+skinparam activityBorderColor #6D88A6
+skinparam noteBackgroundColor #FFFAE9
+skinparam noteBorderColor #BB9A65
+title Выбор окружения бэкенда
+
+actor "Пользователь" as User
+participant "ServerSwitcher" as UI
+participant "ApiEnvironmentHolder" as Holder
+database "app_prefs" as Prefs
+participant "EncryptedPrefsTokenStorage" as Tokens
+participant "Android" as OS
+participant "MainActivity" as Main
+
+note over UI,Holder
+  Выбор доступен, если SERVER_SWITCH_ENABLED
+  и адреса тестового и продового стендов различаются.
+end note
+User -> UI : выбрать другое окружение
+UI -> Holder : select(environment)
+Holder -> Prefs : сохранить api_environment через commit()
+UI -> Tokens : clearTokens() · попытка
+UI -> OS : запустить launcher Activity и завершить процесс
+note right of OS
+  Если launch Intent недоступен,
+  вызывается Activity.recreate().
+end note
+OS -> Main : onCreate()
+Main -> Holder : init(context)
+Holder -> Prefs : прочитать api_environment
+note over Holder,Main
+  Новые сетевые клиенты используют выбранный baseUrl.
+  Экран входа получает ссылку на бота того же стенда.
+end note
+@enduml

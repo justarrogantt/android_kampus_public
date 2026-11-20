@@ -1,0 +1,57 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 14
+skinparam defaultFontColor #16263C
+skinparam titleFontColor #16263C
+skinparam titleFontSize 19
+skinparam ArrowColor #526C8B
+skinparam ComponentBackgroundColor #EDF4FC
+skinparam ComponentBorderColor #526C8B
+skinparam ClassBackgroundColor #EDF4FC
+skinparam ClassBorderColor #526C8B
+skinparam ParticipantBackgroundColor #EDF4FC
+skinparam ParticipantBorderColor #526C8B
+skinparam LifeLineBorderColor #A0B2C7
+skinparam ActivityBackgroundColor #EDF4FC
+skinparam ActivityBorderColor #526C8B
+skinparam ActivityDiamondBackgroundColor #F3F7FC
+skinparam ActivityDiamondBorderColor #526C8B
+skinparam NoteBackgroundColor #F3F7FC
+skinparam NoteBorderColor #A0B2C7
+
+title История изменений доступов
+
+hide footbox
+participant "Экраны и диалоги\nраздела «История»" as UI
+participant AdminViewModel as VM
+participant RemoteAdminRepository as Repo
+participant AdminApi as API
+
+UI -> VM : Открыть историю
+VM -> Repo : Изменённые пользователи, роли и права
+Repo -> API : GET ref/changelog/changed/{тип}
+API --> Repo : Списки изменённых сущностей
+Repo --> VM : Модели для списка
+VM --> UI : HistoryTabContent
+
+UI -> VM : Выбрать сущность
+VM -> Repo : Загрузить историю сущности
+Repo -> API : GET …/{id}/story
+API --> Repo : Записи изменений
+Repo --> VM : List<AdminChangeLogRecord>
+VM --> UI : HistoryRecordsDialog
+UI -> VM : Выбрать запись
+VM --> UI : HistoryRecordDialog (до и после)
+
+opt Запись поддерживает восстановление
+  UI -> VM : Восстановить запись
+  VM -> Repo : restoreChangeLog(logId)
+  Repo -> API : POST ref/changelog/{logId}/restore
+  API --> Repo : Результат восстановления
+  Repo --> VM : Успех
+  ref over VM,API : Повторная загрузка сущностей,\nизменённых списков и истории выбранной сущности
+  VM --> UI : Обновлённая запись или список её истории
+end
+@enduml

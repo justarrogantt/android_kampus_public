@@ -1,0 +1,64 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #476180
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor #F5F8FC
+skinparam packageBorderColor #A8BACF
+skinparam componentStyle rectangle
+skinparam componentBackgroundColor #EDF4FC
+skinparam componentBorderColor #6D88A6
+skinparam rectangleBackgroundColor #EDF4FC
+skinparam rectangleBorderColor #6D88A6
+skinparam classBackgroundColor #EDF4FC
+skinparam classBorderColor #6D88A6
+skinparam participantBackgroundColor #EDF4FC
+skinparam participantBorderColor #6D88A6
+skinparam sequenceLifeLineBorderColor #A8BACF
+skinparam stateBackgroundColor #EDF4FC
+skinparam stateBorderColor #6D88A6
+skinparam activityBackgroundColor #EDF4FC
+skinparam activityBorderColor #6D88A6
+skinparam noteBackgroundColor #FFFAE9
+skinparam noteBorderColor #BB9A65
+title Состояния входа и регистрации
+
+top to bottom direction
+state CheckingSession
+state LoadingCode
+state DevLoading
+state DevLoginPrompt
+state WaitingConfirmation
+state NeedsRegistration
+state Success
+state Error
+state "AuthorizedActions\nГлавная или админ-панель" as Authorized
+[*] --> CheckingSession
+CheckingSession --> Authorized : сессия восстановлена
+CheckingSession --> LoadingCode : staging
+CheckingSession --> DevLoading : dev
+DevLoading --> Authorized : вход успешен
+DevLoading --> DevLoginPrompt : ошибка
+DevLoginPrompt --> DevLoading : повторить
+LoadingCode --> WaitingConfirmation : код получен
+LoadingCode --> Error : ошибка
+WaitingConfirmation --> WaitingConfirmation : pending
+WaitingConfirmation --> NeedsRegistration : needs_registration\nили подтверждение HTTP 202
+WaitingConfirmation --> Success : подтверждение HTTP 200
+NeedsRegistration --> Success : подтверждение HTTP 200
+WaitingConfirmation --> Error : ошибка опроса / неизвестный статус
+NeedsRegistration --> Error : ошибка опроса / неизвестный статус
+Error --> LoadingCode : повторить
+Success --> Authorized : открыть расписание
+note right of Authorized
+  Потеря сессии запускает новый вход
+  по текущему режиму.
+end note
+note bottom of NeedsRegistration
+  Опрос продолжается с тем же кодом.
+  Запрос нового кода отменяет прежний опрос.
+end note
+@enduml

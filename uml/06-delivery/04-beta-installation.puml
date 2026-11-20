@@ -1,0 +1,63 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #476180
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor #F5F8FC
+skinparam packageBorderColor #A8BACF
+skinparam componentStyle rectangle
+skinparam componentBackgroundColor #EDF4FC
+skinparam componentBorderColor #6D88A6
+skinparam rectangleBackgroundColor #EDF4FC
+skinparam rectangleBorderColor #6D88A6
+skinparam classBackgroundColor #EDF4FC
+skinparam classBorderColor #6D88A6
+skinparam participantBackgroundColor #EDF4FC
+skinparam participantBorderColor #6D88A6
+skinparam sequenceLifeLineBorderColor #A8BACF
+skinparam stateBackgroundColor #EDF4FC
+skinparam stateBorderColor #6D88A6
+skinparam activityBackgroundColor #EDF4FC
+skinparam activityBorderColor #6D88A6
+skinparam noteBackgroundColor #FFFAE9
+skinparam noteBorderColor #BB9A65
+title Загрузка и установка бета-APK
+
+actor "Пользователь" as User
+participant "BetaUpdateViewModel" as VM
+participant "BetaUpdateManager" as Manager
+participant "BetaApkInstaller" as Installer
+participant "PackageInstaller\nAndroid" as OS
+participant "BetaInstallResultReceiver" as Receiver
+
+User -> VM : обновить
+VM -> Manager : canInstallPackages()
+Manager -> Installer : проверить разрешение Android
+alt Разрешение выдано
+  VM -> Manager : download(manifest)
+  Manager -> Manager : переиспользовать проверенный APK\nили скачать через PublicService в .part
+  Manager -> Manager : сверить размер и SHA-256
+  Manager --> VM : проверенный APK
+  VM -> Manager : install(apk)
+  Manager -> Installer : install(apk)
+  Installer -> OS : записать base.apk в сессию и вызвать commit()
+  OS -> Receiver : статус через PendingIntent
+  opt Требуется подтверждение
+    Receiver -> User : открыть системный экран
+    Receiver --> VM : AwaitingConfirmation через BetaInstallEvents
+    User -> OS : подтвердить или отменить
+    OS -> Receiver : итоговый статус
+  end
+  Receiver --> VM : Installed / Failed через BetaInstallEvents
+else Разрешения нет
+  VM -> Manager : открыть настройки источников установки
+  VM --> User : показать InstallPermission
+end
+note over Manager,Installer
+  При сбое загрузки или сверки временный файл удаляется.
+  До PackageInstaller доходит только проверенный APK.
+end note
+@enduml

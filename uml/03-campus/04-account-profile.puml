@@ -1,0 +1,69 @@
+@startuml
+' Исходники: ui/main/profile/, data/auth/{ProfileRepository,AuthorizedService}.kt, data/session/CurrentUserStore.kt
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam dpi 120
+skinparam ArrowColor #536D8A
+skinparam titleFontSize 19
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+}
+skinparam class {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  AttributeFontColor #16263C
+}
+skinparam sequence {
+  ParticipantBackgroundColor #EDF4FC
+  ParticipantBorderColor #536D8A
+  LifeLineBorderColor #536D8A
+  GroupBackgroundColor #EDF4FC
+}
+skinparam activity {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  DiamondBackgroundColor #EDF4FC
+  DiamondBorderColor #536D8A
+}
+skinparam note {
+  BackgroundColor #F7F9FC
+  BorderColor #ABBBD0
+  FontColor #16263C
+}
+
+title Профиль · настройки аккаунта
+
+component "ProfileScreen" as screen
+component "EditProfileSheet" as edit
+component "ProfileViewModel" as vm
+component "CurrentUserStore" as user
+component "TokenStorage" as tokens
+component "ScheduleRepository" as schedule
+component "ProfileRepository" as repo
+component "AuthorizedService" as api
+component "JokeSheet" as joke
+component "JokeViewModel" as jokeVm
+
+screen --> vm : события профиля и аватара
+screen --> edit : открыть редактирование
+edit --> vm : ник, цвет, роль, сущность, Telegram
+screen --> joke : открыть анекдот
+joke --> jokeVm : другой анекдот
+jokeVm --> repo : getJoke(seenIds)
+vm --> user : читать и сохранять профиль
+vm --> tokens : запасной источник id
+vm --> schedule : справочник сущностей
+vm --> repo : профиль, аватар, тумблер Telegram
+repo --> api : профильные HTTP-запросы
+
+note bottom of api
+  Изменение тумблера сохраняется через
+  PATCH profile/telegram-notifications.
+  PUT ref/user/{id} следует при наличии
+  изменений полей пользователя.
+end note
+@enduml

@@ -1,0 +1,58 @@
+@startuml
+' Исходники: ui/main/forum/components/{ContentImage,ForumImageViewer}.kt, ui/main/profile/activity/MyProfileSheet.kt, data/{forum/ForumImageDownloader,auth/ProfilePhotoDownloader,media/GalleryImageSaver}.kt
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam dpi 120
+skinparam ArrowColor #536D8A
+skinparam titleFontSize 19
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+}
+skinparam class {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  AttributeFontColor #16263C
+}
+skinparam sequence {
+  ParticipantBackgroundColor #EDF4FC
+  ParticipantBorderColor #536D8A
+  LifeLineBorderColor #536D8A
+  GroupBackgroundColor #EDF4FC
+}
+skinparam activity {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  DiamondBackgroundColor #EDF4FC
+  DiamondBorderColor #536D8A
+}
+skinparam note {
+  BackgroundColor #F7F9FC
+  BorderColor #ABBBD0
+  FontColor #16263C
+}
+
+title Изображения · просмотр и сохранение
+
+component "Карточка поста или комментария\nContentImage" as card
+component "MyProfileSheet\nАватар автора" as profile
+component "ForumImageViewer\nПолноэкранный просмотр" as viewer
+component "Coil / AsyncImage" as coil
+component "ForumImageDownloader\nОбычный OkHttpClient" as forum
+component "ProfilePhotoDownloader\nAuthorizedService" as own
+component "GalleryImageSaver" as gallery
+component "Android MediaStore" as media
+
+card --> coil : миниатюра и её пропорции
+card --> viewer : оригинал по нажатию
+profile --> viewer : аватар по нажатию
+viewer --> coil : показать изображение
+viewer ..> forum : действие ForumViewModel
+viewer ..> own : действие MyProfileViewModel\nтолько для своего профиля
+forum --> gallery : байты forum/media/{id}
+own --> gallery : байты profile/photo/download
+gallery --> media : записать в галерею
+@enduml

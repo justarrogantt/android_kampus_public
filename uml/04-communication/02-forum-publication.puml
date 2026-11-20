@@ -1,0 +1,75 @@
+@startuml
+' Исходники: ui/main/forum/{ForumViewModel,ForumUiState}.kt, data/forum/ForumRepository.kt, data/media/ImageUploadPart.kt
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam dpi 120
+skinparam ArrowColor #536D8A
+skinparam titleFontSize 19
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+}
+skinparam class {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  AttributeFontColor #16263C
+}
+skinparam sequence {
+  ParticipantBackgroundColor #EDF4FC
+  ParticipantBorderColor #536D8A
+  LifeLineBorderColor #536D8A
+  GroupBackgroundColor #EDF4FC
+}
+skinparam activity {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  DiamondBackgroundColor #EDF4FC
+  DiamondBorderColor #536D8A
+}
+skinparam note {
+  BackgroundColor #F7F9FC
+  BorderColor #ABBBD0
+  FontColor #16263C
+}
+
+title Форум · публикация поста или комментария
+
+actor "Пользователь" as reader
+participant "Форма" as ui
+participant "ForumViewModel" as vm
+participant "ForumRepository" as repo
+participant "AuthorizedService" as api
+participant "ForumCache" as cache
+
+opt Выбрано вложение
+  reader -> ui : Выбрать фото
+  ui -> vm : URI
+  vm -> repo : uploadImage(uri)
+  repo -> repo : Подготовить multipart\nчерез withImageUploadPart
+  repo -> api : POST forum/media
+  alt Вложение загружено
+    api --> repo : id вложения
+    repo --> vm : ForumAttachment
+  else Ошибка
+    repo --> vm : Ошибка формата, размера или загрузки
+    vm --> ui : Убрать вложение и показать сообщение
+  end
+end
+
+reader -> ui : Отправить текст или вложение
+ui -> vm : onCreatePost / onSendComment
+vm -> repo : createPost / addComment (текст, imageId)
+repo -> api : POST forum/posts или forum/posts/{id}/comments
+alt Публикация принята
+  api --> repo : result и, при публикации, карточка
+  repo -> cache : evictContent()
+  repo --> vm : Published или ModerationRequired
+  vm --> ui : Очистить черновик, при публикации\nобновить список
+else Ошибка запроса
+  repo --> vm : Ошибка
+  vm --> ui : Показать сообщение и сохранить черновик
+end
+@enduml

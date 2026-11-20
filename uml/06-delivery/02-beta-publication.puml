@@ -1,0 +1,52 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #476180
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor #F5F8FC
+skinparam packageBorderColor #A8BACF
+skinparam componentStyle rectangle
+skinparam componentBackgroundColor #EDF4FC
+skinparam componentBorderColor #6D88A6
+skinparam rectangleBackgroundColor #EDF4FC
+skinparam rectangleBorderColor #6D88A6
+skinparam classBackgroundColor #EDF4FC
+skinparam classBorderColor #6D88A6
+skinparam participantBackgroundColor #EDF4FC
+skinparam participantBorderColor #6D88A6
+skinparam sequenceLifeLineBorderColor #A8BACF
+skinparam stateBackgroundColor #EDF4FC
+skinparam stateBorderColor #6D88A6
+skinparam activityBackgroundColor #EDF4FC
+skinparam activityBorderColor #6D88A6
+skinparam noteBackgroundColor #FFFAE9
+skinparam noteBorderColor #BB9A65
+title Сборка и публикация бета-APK в CI
+
+actor "GitHub" as Trigger
+participant "GitHub Actions" as CI
+participant "Gradle / R8" as Gradle
+participant "Прод-бэкенд" as Backend
+participant "Firebase" as Firebase
+collections "Артефакты GitHub" as Artifacts
+
+Trigger -> CI : push на настроенные ветки или ручной запуск
+CI -> CI : подготовить JDK 17, окружения и бета-подпись\nVERSION_CODE = номер запуска
+CI -> Gradle : assembleStagingBetaRelease
+Gradle -> Firebase : Crashlytics · загрузить R8 mapping.txt
+Gradle --> CI : APK и файлы R8
+CI -> CI : найти единственный APK и вычислить SHA-256
+CI -> Backend : POST builds/beta · APK и метаданные
+Backend --> CI : ответ о публикации
+opt Публикация прошла или допустим повтор запуска
+  CI -> Firebase : App Distribution · тот же APK для testers
+end
+CI -> Artifacts : сохранить APK и файлы R8, если они созданы
+note over Backend
+  Бэкенд раздаёт APK и манифест,
+  который читает приложение.
+end note
+@enduml

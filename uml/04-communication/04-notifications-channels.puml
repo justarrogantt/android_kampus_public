@@ -1,0 +1,69 @@
+@startuml
+' Исходники: ui/main/{MainScreen.kt,notifications/}, data/{notifications/,network/ws/UserWebSocketClient.kt}
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam dpi 120
+skinparam ArrowColor #536D8A
+skinparam titleFontSize 19
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+}
+skinparam class {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  AttributeFontColor #16263C
+}
+skinparam sequence {
+  ParticipantBackgroundColor #EDF4FC
+  ParticipantBorderColor #536D8A
+  LifeLineBorderColor #536D8A
+  GroupBackgroundColor #EDF4FC
+}
+skinparam activity {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  DiamondBackgroundColor #EDF4FC
+  DiamondBorderColor #536D8A
+}
+skinparam note {
+  BackgroundColor #F7F9FC
+  BorderColor #ABBBD0
+  FontColor #16263C
+}
+
+title Уведомления · список, счётчики и WebSocket
+
+component "MainScreen\nШторка, колокольчики и бейдж профиля" as ui
+component "NotificationsViewModel" as vm
+component "NotificationsUiState" as state
+component "NotificationRepository" as repo
+component "NotificationCache" as cache
+component "AuthorizedService" as api
+component "UserWebSocketClient" as socket
+component "Персональный канал /ws/user" as ws
+
+ui --> vm : вход и выход, события шторки
+vm --> state : StateFlow
+vm --> repo : страницы и отметки о прочтении
+repo --> cache : первая страница\nсброс после отметки о прочтении
+repo --> api : GET notifications\nPOST notifications/read
+vm --> socket : start / stop
+socket --> ws : соединение
+socket ..> vm : события пользователя
+
+note right of vm
+  notification_created добавляет карточку
+  и обновляет счётчик непрочитанного.
+  notification_target_unavailable
+  помечает загруженную цель недоступной.
+end note
+
+note right of state
+  moderationCount приходит из REST-страниц.
+  Строка очереди открывает админку.
+end note
+@enduml

@@ -1,0 +1,68 @@
+@startuml
+' Исходники: ui/main/{MainScreen.kt,notifications/NotificationsViewModel.kt,forum/{ForumViewModel,ThreadScreen}.kt}
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam dpi 120
+skinparam ArrowColor #536D8A
+skinparam titleFontSize 19
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+}
+skinparam class {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  AttributeFontColor #16263C
+}
+skinparam sequence {
+  ParticipantBackgroundColor #EDF4FC
+  ParticipantBorderColor #536D8A
+  LifeLineBorderColor #536D8A
+  GroupBackgroundColor #EDF4FC
+}
+skinparam activity {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  DiamondBackgroundColor #EDF4FC
+  DiamondBorderColor #536D8A
+}
+skinparam note {
+  BackgroundColor #F7F9FC
+  BorderColor #ABBBD0
+  FontColor #16263C
+}
+
+title Уведомления · переход к комментарию
+
+actor "Пользователь" as reader
+participant "NotificationsViewModel" as notify
+participant "NotificationRepository" as notifications
+participant "MainScreen" as shell
+participant "ForumViewModel" as forum
+participant "ThreadScreen" as thread
+
+reader -> notify : Нажать на карточку в шторке
+opt Уведомление ещё не прочитано
+  notify ->> notifications : markRead(id) асинхронно
+end
+alt Цель недоступна
+  notify --> reader : Сообщение об удалённой цели
+else Цель доступна
+  notify --> shell : Закрыть шторку,\nвыставить openTarget
+  shell -> forum : onPostClick(postId, commentId)
+  shell -> notify : onOpenTargetHandled()
+  forum --> thread : Показать тред над текущей вкладкой
+  forum -> forum : Загрузить пост и первую\nстраницу комментариев
+  loop До пяти страниц, пока цель не найдена
+    forum -> forum : Запросить следующую страницу по курсору
+    forum --> thread : Дополнить список комментариев
+  end
+  opt Комментарий найден
+    thread -> thread : Прокрутить и подсветить\nна 3 секунды
+    thread -> forum : onFocusCommentHandled()
+  end
+end
+@enduml

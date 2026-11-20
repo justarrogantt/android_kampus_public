@@ -1,0 +1,67 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 14
+skinparam defaultFontColor #16263C
+skinparam titleFontColor #16263C
+skinparam titleFontSize 19
+skinparam ArrowColor #526C8B
+skinparam ComponentBackgroundColor #EDF4FC
+skinparam ComponentBorderColor #526C8B
+skinparam ClassBackgroundColor #EDF4FC
+skinparam ClassBorderColor #526C8B
+skinparam ParticipantBackgroundColor #EDF4FC
+skinparam ParticipantBorderColor #526C8B
+skinparam LifeLineBorderColor #A0B2C7
+skinparam ActivityBackgroundColor #EDF4FC
+skinparam ActivityBorderColor #526C8B
+skinparam ActivityDiamondBackgroundColor #F3F7FC
+skinparam ActivityDiamondBorderColor #526C8B
+skinparam NoteBackgroundColor #F3F7FC
+skinparam NoteBorderColor #A0B2C7
+
+title Админ-панель и источники данных
+
+top to bottom direction
+skinparam componentStyle rectangle
+skinparam nodesep 24
+
+component "RegistrationFlowScreen" as Root
+component AdminPanelScreen as Route
+component AdminPanelContent as Content
+component AdminViewModelFactory as Factory
+component AdminViewModel as VM
+interface AdminRepository as Repository
+component AdminRepositoryProvider as Provider
+component RemoteAdminRepository as Remote
+component FakeAdminRepository as Fake
+component "AdminApi\nзащищённый Retrofit" as API
+component SharedPrefsCurrentUserStore as Store
+
+Root --> Route : навигация
+Route --> Content : состояние + обработчик событий
+Route --> Factory : передаёт репозиторий
+Route --> Provider : режим Remote
+Factory ..> VM : создаёт
+Content --> VM : AdminEvent
+VM ..> Content : StateFlow<AdminUiState>
+VM --> Repository
+Provider ..> Remote : Remote
+Provider ..> Fake : Fake
+Remote ..|> Repository
+Fake ..|> Repository
+Remote --> API
+Remote --> Store : права
+
+note left of Root
+  Вход из профиля по тапу на версию
+  или через уведомление о модерации.
+end note
+note left of VM
+  Вкладки: Модерация, Статистика,
+  Пользователи, Доступы, Логи.
+  Список зависит от кэша прав.
+  При отсутствии кэша видны все.
+end note
+@enduml

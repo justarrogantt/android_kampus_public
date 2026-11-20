@@ -1,0 +1,68 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #476180
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor #F5F8FC
+skinparam packageBorderColor #A8BACF
+skinparam componentStyle rectangle
+skinparam componentBackgroundColor #EDF4FC
+skinparam componentBorderColor #6D88A6
+skinparam rectangleBackgroundColor #EDF4FC
+skinparam rectangleBorderColor #6D88A6
+skinparam classBackgroundColor #EDF4FC
+skinparam classBorderColor #6D88A6
+skinparam participantBackgroundColor #EDF4FC
+skinparam participantBorderColor #6D88A6
+skinparam sequenceLifeLineBorderColor #A8BACF
+skinparam stateBackgroundColor #EDF4FC
+skinparam stateBorderColor #6D88A6
+skinparam activityBackgroundColor #EDF4FC
+skinparam activityBorderColor #6D88A6
+skinparam noteBackgroundColor #FFFAE9
+skinparam noteBorderColor #BB9A65
+title Локальные данные аккаунта и устройства
+
+hide empty members
+interface TokenStorage {
+  getAccessToken()
+  getRefreshToken()
+  saveTokens(access, refresh)
+  clearTokens()
+}
+interface CurrentUserStore {
+  save(user)
+  update(user, telegramNotificationsEnabled)
+  get()
+  clear()
+}
+interface DeviceIdStorage {
+  getOrCreateDeviceId()
+}
+class EncryptedPrefsTokenStorage
+class SharedPrefsCurrentUserStore
+class SharedPrefsDeviceIdStorage
+class CurrentUser {
+  id: Long?
+  profileId: String?
+  role: String
+  entityOid: String?
+  permissions: Set<String>?
+}
+class "secure_tokens\nEncryptedSharedPreferences" as Secure <<storage>>
+class "app_prefs\nSharedPreferences" as Prefs <<storage>>
+TokenStorage <|.. EncryptedPrefsTokenStorage
+CurrentUserStore <|.. SharedPrefsCurrentUserStore
+DeviceIdStorage <|.. SharedPrefsDeviceIdStorage
+EncryptedPrefsTokenStorage --> Secure : access / refresh
+SharedPrefsCurrentUserStore --> Prefs : поля профиля
+SharedPrefsDeviceIdStorage --> Prefs : device_id (UUID)
+SharedPrefsCurrentUserStore ..> CurrentUser : восстанавливает
+note bottom of Secure
+  Если ID пользователя отсутствует в карточке,
+  профиль берёт user_id из access-токена.
+end note
+@enduml

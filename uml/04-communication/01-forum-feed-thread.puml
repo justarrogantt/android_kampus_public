@@ -1,0 +1,62 @@
+@startuml
+' Исходники: ui/main/{MainScreen.kt,forum/}, data/forum/{ForumRepository,ForumCache}.kt, data/auth/AuthorizedService.kt
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam dpi 120
+skinparam ArrowColor #536D8A
+skinparam titleFontSize 19
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+}
+skinparam class {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  AttributeFontColor #16263C
+}
+skinparam sequence {
+  ParticipantBackgroundColor #EDF4FC
+  ParticipantBorderColor #536D8A
+  LifeLineBorderColor #536D8A
+  GroupBackgroundColor #EDF4FC
+}
+skinparam activity {
+  BackgroundColor #EDF4FC
+  BorderColor #536D8A
+  DiamondBackgroundColor #EDF4FC
+  DiamondBorderColor #536D8A
+}
+skinparam note {
+  BackgroundColor #F7F9FC
+  BorderColor #ABBBD0
+  FontColor #16263C
+}
+
+title Форум · лента, тред и пагинация
+
+component "ForumScreen\nЛента и создание поста" as feed
+component "ForumThreadHost\nThreadScreen над вкладками" as thread
+component "ForumViewModel" as vm
+component "ForumUiState\nЛента и открытый пост" as state
+component "ForumThreadUiState\nПост, комментарии, черновик" as ts
+component "ForumRepository" as repo
+component "ForumCache" as cache
+component "AuthorizedService" as api
+
+feed --> vm : открыть пост, листать ленту
+thread --> vm : листать и закрыть тред
+vm --> state : StateFlow
+state --> ts : thread
+vm --> repo : getFeed, getPost, getComments
+repo --> cache : первые страницы и пост
+repo --> api : GET forum/posts,\nпост и его комментарии
+
+note left of vm
+  При открытии сначала рисуется копия с диска.
+  У ленты и комментариев отдельные курсоры.
+  Следующие страницы дополняют списки по id.
+end note
+@enduml

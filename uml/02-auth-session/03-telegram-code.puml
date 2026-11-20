@@ -1,0 +1,64 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontColor #16263C
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #476180
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor #F5F8FC
+skinparam packageBorderColor #A8BACF
+skinparam componentStyle rectangle
+skinparam componentBackgroundColor #EDF4FC
+skinparam componentBorderColor #6D88A6
+skinparam rectangleBackgroundColor #EDF4FC
+skinparam rectangleBorderColor #6D88A6
+skinparam classBackgroundColor #EDF4FC
+skinparam classBorderColor #6D88A6
+skinparam participantBackgroundColor #EDF4FC
+skinparam participantBorderColor #6D88A6
+skinparam sequenceLifeLineBorderColor #A8BACF
+skinparam stateBackgroundColor #EDF4FC
+skinparam stateBorderColor #6D88A6
+skinparam activityBackgroundColor #EDF4FC
+skinparam activityBorderColor #6D88A6
+skinparam noteBackgroundColor #FFFAE9
+skinparam noteBorderColor #BB9A65
+title Обмен кода Telegram на сессию
+
+actor "Пользователь" as User
+participant "RegistrationViewModel" as VM
+participant "RegistrationRepository" as Repo
+participant "Бэкенд YSU Kampus" as API
+participant "Telegram\nбот / мини-приложение" as Tg
+
+VM -> Repo : запросить код (через interactor)
+Repo -> API : PublicService · POST auth/code
+API --> Repo : код
+Repo --> VM : код
+VM --> User : показать код
+User -> Tg : отправить код и при необходимости зарегистрироваться
+loop До успешного подтверждения, отмены или ошибки
+  VM -> Repo : проверить статус
+  Repo -> API : PublicService · GET auth/status/{code}
+  API --> Repo : статус или ошибка
+  Repo --> VM : статус или ошибка
+  alt pending / needs_registration
+    VM -> VM : обновить состояние при необходимости\nи подождать 3 секунды
+  else success
+    VM -> Repo : подтвердить код
+    Repo -> API : AuthService · POST auth/code/confirm/{code}
+    API --> Repo : 200 с токенами и пользователем или 202
+    alt HTTP 200
+      Repo -> Repo : сохранить access и refresh в TokenStorage
+      Repo --> VM : Success(user)
+      VM -> VM : сохранить пользователя, отметить сессию\nавторизованной и завершить опрос
+    else HTTP 202
+      Repo --> VM : NeedsRegistration
+      VM -> VM : подождать 3 секунды
+    end
+  else Неизвестный статус / ошибка запроса
+    VM -> VM : Error и завершение опроса
+  end
+end
+@enduml
