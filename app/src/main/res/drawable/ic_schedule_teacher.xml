@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Перенесено из react/src/assets/icons/schedule/teacher.svg -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="14dp"
+    android:height="14dp"
+    android:viewportWidth="14"
+    android:viewportHeight="14">
+    <path
+        android:pathData="M1.5,5.2 L7,2.8 L12.5,5.2 L7,7.6 L1.5,5.2Z"
+        android:strokeWidth="1.35"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M3.5,6.2 v2.2 c0,0.9 1.6,1.8 3.5,1.8 s3.5,-0.9 3.5,-1.8 V6.2"
+        android:strokeWidth="1.35"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M12.5,5.3 v2.4"
+        android:strokeWidth="1.35"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

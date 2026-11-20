@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Только для бета-типов сборки (beta и betaRelease — второй берёт этот файл
+    симлинком, как и google-services.json). В release разрешения нет: для
+    Google Play REQUEST_INSTALL_PACKAGES — ограниченное разрешение с
+    обязательной декларацией, а самообновление там не нужно.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+        Установка бета-обновления, скачанного со своего бэкенда, через
+        PackageInstaller (ui/main/update). Пользователь всё равно подтверждает
+        каждую установку и выдаёт «Установку из этого источника» в настройках.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <application>
+        <!-- Статус сессии PackageInstaller; сюда приходит только наш PendingIntent. -->
+        <receiver
+            android:name="com.example.ysukampus.ui.main.update.BetaInstallResultReceiver"
+            android:exported="false" />
+    </application>
+</manifest>

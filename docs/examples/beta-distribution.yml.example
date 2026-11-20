@@ -1,0 +1,305 @@
+name: Firebase App Distribution
+
+on:
+  push:
+    branches:
+      - develop
+      - feature/firebase-app-distribution
+  workflow_dispatch:
+
+jobs:
+  distribute-beta:
+    name: Build and distribute beta APK
+    runs-on: ubuntu-latest
+
+    env:
+      VERSION_CODE: ${{ github.run_number }}
+      VERSION_NAME: 0.1.0-beta.${{ github.run_number }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # Все шесть ключей, а не один BASE_URL: адреса теста и прода читает
+      # ApiEnvironment, и когда их нет, оба падают обратно на BASE_URL. Тогда
+      # ApiEnvironmentHolder.isSwitchAvailable даёт false, и переключатель
+      # сервера в сборке для тестеров просто не рисуется — ровно так и было до
+      # 2026-09-20. У каждого бэкенда свой Telegram-бот: код, выданный одним
+      # сервером, второй бот не знает, поэтому ссылки идут парой к адресам.
+      - name: Create local.properties
+        run: |
+          echo "BASE_URL=${{ secrets.BASE_URL }}" >> local.properties
+          echo "BASE_URL_TEST=${{ secrets.BASE_URL_TEST }}" >> local.properties
+          echo "BASE_URL_PROD=${{ secrets.BASE_URL_PROD }}" >> local.properties
+          echo "TELEGRAM_BOT_LINK=https://t.me/ysukampusbot" >> local.properties
+          echo "TELEGRAM_BOT_LINK_TEST=${{ secrets.TELEGRAM_BOT_LINK_TEST }}" >> local.properties
+          echo "TELEGRAM_BOT_LINK_PROD=${{ secrets.TELEGRAM_BOT_LINK_PROD }}" >> local.properties
+
+      # Пустой секрет раньше проглатывался молча: build.gradle.kts ронял
+      # недостающий адрес обратно на BASE_URL, isSwitchAvailable получал false,
+      # и переключатель просто не появлялся в сборке — без единой строки в логе.
+      # Шаг печатает только факт совпадения, без самих адресов: это адреса
+      # стендов, а лог раздачи читают шире, чем настройки репозитория.
+      - name: Check server switch config
+        run: |
+          get() {
+            sed -n "s/^$1=//p" local.properties | tail -n 1
+          }
+
+          base_test=$(get BASE_URL_TEST)
+          base_prod=$(get BASE_URL_PROD)
+          bot_test=$(get TELEGRAM_BOT_LINK_TEST)
+          bot_prod=$(get TELEGRAM_BOT_LINK_PROD)
+
+          status=ok
+
+          if [ -z "$base_test" ] || [ -z "$base_prod" ]; then
+            echo "::error::BASE_URL_TEST и/или BASE_URL_PROD пуст — заведите секреты репозитория. Переключатель сервера в сборке не появится."
+            status=broken
+          elif [ "$base_test" = "$base_prod" ]; then
+            echo "::error::BASE_URL_TEST совпадает с BASE_URL_PROD — переключатель сервера в сборке не появится."
+            status=broken
+          else
+            echo "BASE_URL_TEST и BASE_URL_PROD различаются — переключатель сервера будет доступен."
+          fi
+
+          if [ -z "$bot_test" ] || [ -z "$bot_prod" ]; then
+            echo "::warning::TELEGRAM_BOT_LINK_TEST и/или TELEGRAM_BOT_LINK_PROD пуст — обе ветки уедут на общего бота, и код одного сервера второй не примет."
+          elif [ "$bot_test" = "$bot_prod" ]; then
+            echo "::warning::TELEGRAM_BOT_LINK_TEST совпадает с TELEGRAM_BOT_LINK_PROD — у стендов разные боты, проверьте секреты."
+          else
+            echo "TELEGRAM_BOT_LINK_TEST и TELEGRAM_BOT_LINK_PROD различаются."
+          fi
+
+          {
+            echo "### Переключатель сервера"
+            echo ""
+            if [ "$status" = ok ]; then
+              echo "- Адреса стендов: различаются, переключатель доступен"
+            else
+              echo "- Адреса стендов: **не различаются** — переключателя в сборке не будет"
+            fi
+            if [ -n "$bot_test" ] && [ -n "$bot_prod" ] && [ "$bot_test" != "$bot_prod" ]; then
+              echo "- Telegram-боты: различаются"
+            else
+              echo "- Telegram-боты: **не различаются** — вход на одном из стендов не пройдёт"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Decode beta keystore
+        run: |
+          echo "${{ secrets.BETA_KEYSTORE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/ysukampus-beta.jks"
+
+      - name: Create Firebase service account file
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/firebase-service-account.json"
+
+      # Сборка отдельно от выгрузок: APK нужен и бэкенду, и App Distribution,
+      # а плагин App Distribution из Gradle убран вместе с SDK.
+      - name: Build beta APK
+        env:
+          # Как и до переезда: assemble тянет за собой выгрузку mapping.txt в
+          # Crashlytics, и окружение шага для неё не меняем.
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+          BETA_KEYSTORE_FILE: ${{ runner.temp }}/ysukampus-beta.jks
+          BETA_KEYSTORE_PASSWORD: ${{ secrets.BETA_KEYSTORE_PASSWORD }}
+          BETA_KEY_ALIAS: ${{ secrets.BETA_KEY_ALIAS }}
+          BETA_KEY_PASSWORD: ${{ secrets.BETA_KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleStagingBetaRelease --stacktrace
+
+      # Ровно один APK, иначе обе выгрузки ниже могут уйти с разными файлами.
+      - name: Locate beta APK
+        id: apk
+        run: |
+          shopt -s nullglob
+          apks=(app/build/outputs/apk/staging/betaRelease/*.apk)
+          if [ "${#apks[@]}" -ne 1 ]; then
+            echo "::error::Ожидался ровно один APK в app/build/outputs/apk/staging/betaRelease, найдено ${#apks[@]}: ${apks[*]}"
+            exit 1
+          fi
+          echo "path=${apks[0]}" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "${apks[0]}" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      # Раздача со своего бэкенда (app/routers/builds.py): приложение само
+      # проверяет builds/beta/latest и ставит обновление, без гуглового аккаунта.
+      # Заливаем только на прод (secrets.BASE_URL): на тестовом стенде ни кода
+      # builds, ни секрета нет, и это осознанно на время беты.
+      #
+      # Коды ответа бэкенда:
+      #   200 — сохранено; повтор того же файла тоже 200 (бэкенд вернёт уже
+      #         сохранённый манифест), поэтому ретраи curl безопасны;
+      #   409 — этот version_code уже залит с ДРУГИМ файлом. Для «Re-run jobs»
+      #         это ожидаемо: run_number тот же, а APK пересобран и не совпадает
+      #         побайтно (Crashlytics вшивает в каждую сборку свой mapping id).
+      #         Тогда на сервере остаётся APK первой попытки того же коммита —
+      #         предупреждение, не ошибка. На первой попытке 409 — это коллизия
+      #         version_code, и шаг падает;
+      #   403 — неверный секрет, 413 — файл больше лимита, 422 — не APK или
+      #         невалидные поля (например, пробел в VERSION_NAME) — всё падает.
+      # Все значения идут через --form-string и файлы, а не -F name=value:
+      # curl разбирает в -F символы «;», «@» и «<», и notes с точкой с запятой
+      # молча обрезались бы.
+      - name: Upload beta APK to backend
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          BUILD_UPLOAD_SECRET: ${{ secrets.BUILD_UPLOAD_SECRET }}
+          APK_PATH: ${{ steps.apk.outputs.path }}
+          APK_SHA256: ${{ steps.apk.outputs.sha256 }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$BASE_URL" ]; then
+            echo "::error::Секрет BASE_URL пуст — некуда заливать сборку."
+            exit 1
+          fi
+          if [ -z "$BUILD_UPLOAD_SECRET" ]; then
+            echo "::error::Секрет BUILD_UPLOAD_SECRET пуст — бэкенд ответит 403. Заведите секрет репозитория."
+            exit 1
+          fi
+          # Тот же паттерн, что в app/routers/builds.py: с ним ошибка видна
+          # здесь, а не как 422 без объяснений.
+          if ! [[ "$VERSION_NAME" =~ ^[0-9A-Za-z._+-]{1,64}$ ]]; then
+            echo "::error::VERSION_NAME='$VERSION_NAME' не подходит бэкенду: только [0-9A-Za-z._+-], до 64 символов, без пробелов и слешей."
+            exit 1
+          fi
+
+          upload_url="${BASE_URL%/}/builds/beta"
+
+          secret_file="$RUNNER_TEMP/build-upload-secret"
+          notes_file="$RUNNER_TEMP/build-notes.txt"
+          response_file="$RUNNER_TEMP/build-upload-response.json"
+          printf '%s' "$BUILD_UPLOAD_SECRET" > "$secret_file"
+          trap 'rm -f "$secret_file"' EXIT
+          # Лимит бэкенда — 10000 символов. Режем с запасом через файл, а не
+          # трубой: под pipefail ранний выход head уронил бы шаг по SIGPIPE.
+          # iconv -c выкидывает UTF-8-символ, разрезанный по границе байтов.
+          {
+            echo "Сборка ${VERSION_NAME} (${GITHUB_REF_NAME}@${GITHUB_SHA::7})"
+            echo ""
+            git log -1 --format=%B
+          } > "$notes_file.full"
+          head -c 9000 "$notes_file.full" | iconv -c -f UTF-8 -t UTF-8 > "$notes_file"
+
+          set +e
+          http_code=$(curl --silent --show-error \
+            --retry 3 --retry-delay 10 \
+            --connect-timeout 30 --max-time 900 \
+            --output "$response_file" --write-out '%{http_code}' \
+            --form "apk=@${APK_PATH};type=application/vnd.android.package-archive" \
+            --form-string "version_code=${VERSION_CODE}" \
+            --form-string "version_name=${VERSION_NAME}" \
+            --form "notes=<${notes_file}" \
+            --form "secret_key=<${secret_file}" \
+            "$upload_url")
+          curl_exit=$?
+          set -e
+
+          if [ "$curl_exit" -ne 0 ]; then
+            echo "::error::curl завершился с кодом $curl_exit (HTTP ${http_code:-нет ответа}) — сборка на бэкенд не залита."
+            exit 1
+          fi
+
+          echo "Бэкенд ответил HTTP $http_code:"
+          cat "$response_file"; echo
+
+          case "$http_code" in
+            200)
+              server_sha=$(jq -r '.sha256 // empty' "$response_file")
+              server_code=$(jq -r '.version_code // empty' "$response_file")
+              if [ "$server_code" != "$VERSION_CODE" ]; then
+                echo "::error::Бэкенд подтвердил version_code=$server_code, а заливали $VERSION_CODE."
+                exit 1
+              fi
+              if [ "$server_sha" != "$APK_SHA256" ]; then
+                echo "::error::sha256 на бэкенде ($server_sha) не совпал с собранным APK ($APK_SHA256)."
+                exit 1
+              fi
+              result="залита, sha256 совпал"
+              ;;
+            409)
+              if [ "$RUN_ATTEMPT" -gt 1 ]; then
+                echo "::warning::Сборка $VERSION_CODE уже на бэкенде с прошлой попытки этого прогона (другой файл того же коммита). Тестеры получат её; новый APK ушёл только в артефакт и App Distribution."
+                result="уже была с предыдущей попытки прогона — на сервере оставлена она"
+              else
+                echo "::error::version_code $VERSION_CODE уже занят другим файлом, а это первая попытка прогона — коллизия номеров сборок."
+                exit 1
+              fi
+              ;;
+            *)
+              echo "::error::Заливка на бэкенд не удалась: HTTP $http_code — $(jq -r '.detail // empty' "$response_file" 2>/dev/null || true)"
+              exit 1
+              ;;
+          esac
+
+          {
+            echo "### Раздача со своего бэкенда"
+            echo ""
+            echo "- Сборка: ${VERSION_NAME} (version_code ${VERSION_CODE})"
+            echo "- Результат: ${result}"
+            echo "- sha256 собранного APK: \`${APK_SHA256}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Старый путь раздачи оставлен, пока новый не проверен на живых тестерах.
+      # Gradle-плагин App Distribution убран вместе с SDK, поэтому выгрузка —
+      # через firebase-tools тем же service account. App ID берётся из
+      # google-services.json, а не вписан руками, чтобы не разъехаться с ним.
+      - name: Upload beta APK to Firebase App Distribution
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+          APK_PATH: ${{ steps.apk.outputs.path }}
+        run: |
+          set -euo pipefail
+          app_id=$(jq -r '.client[] | select(.client_info.android_client_info.package_name == "com.example.ysukampus.beta") | .client_info.mobilesdk_app_id' app/src/beta/google-services.json)
+          if [ -z "$app_id" ]; then
+            echo "::error::В app/src/beta/google-services.json нет клиента com.example.ysukampus.beta."
+            exit 1
+          fi
+          npx --yes firebase-tools@14 appdistribution:distribute "$APK_PATH" \
+            --app "$app_id" \
+            --groups testers \
+            --release-notes "Beta build from GitHub Actions"
+
+      # APK артефактом — чтобы поставить ровно ту сборку, что ушла тестерам,
+      # без App Distribution: подписанная ссылка на бинарь живёт недолго и
+      # привязана к сессии, а `gh run download` работает всегда. Тот же файл
+      # нужен, когда надо проверить краш или R8-специфичное поведение на своём
+      # устройстве — локальная сборка для этого не годится, у неё другой
+      # mapping.txt, и стектрейс в Crashlytics останется обфусцированным.
+      - name: Upload beta APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ github.run_number }}
+          # Каталоги APK вложены по флейвору (staging/betaRelease), в отличие
+          # от mapping — тот лежит плоско, одной папкой stagingBetaRelease.
+          path: app/build/outputs/apk/staging/betaRelease/*.apk
+          retention-days: 30
+          if-no-files-found: warn
+
+      # mapping.txt нужен, чтобы читать стектрейсы крашей от тестеров: после R8
+      # классы называются a.b.c. Файл валиден только для этой конкретной сборки,
+      # поэтому имя артефакта привязано к номеру запуска.
+      - name: Upload R8 mapping
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mapping-${{ github.run_number }}
+          path: |
+            app/build/outputs/mapping/stagingBetaRelease/mapping.txt
+            app/build/outputs/mapping/stagingBetaRelease/seeds.txt
+            app/build/outputs/mapping/stagingBetaRelease/usage.txt
+          retention-days: 90
+          if-no-files-found: warn
